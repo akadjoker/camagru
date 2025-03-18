@@ -16,11 +16,15 @@
                 
                 <!-- Tab Webcam -->
                 <div id="content-webcam">
-                    <div class="has-text-centered mb-4">
+                    <!-- <div class="has-text-centered mb-4">
                         <video id="video" width="100%" height="auto" autoplay></video>
                         <canvas id="canvas" style="display:none;"></canvas>
+                    </div> -->
+                    <div class="has-text-centered mb-4">
+                        <video id="video" width="640" height="480" autoplay style="display:none;"></video>
+                        <canvas id="canvas" style="display:none;"></canvas>
+                        <canvas id="preview-canvas" width="640" height="480"></canvas>
                     </div>
-                    
                     <div class="field">
                         <div class="control">
                             <button id="snap" class="button is-primary is-fullwidth" disabled>
@@ -198,9 +202,13 @@ document.addEventListener('DOMContentLoaded', function()
     const tabUpload = document.getElementById('tab-upload');
     const contentWebcam = document.getElementById('content-webcam');
     const contentUpload = document.getElementById('content-upload');
- 
-
     
+    
+    const previewCanvas = document.getElementById('preview-canvas');
+    const previewContext = previewCanvas.getContext('2d'); 
+    const filterSelect = document.getElementById('filter-select');
+
+ 
     let capturedImage = null;
     let selectedOverlayId = null;
  
@@ -208,6 +216,242 @@ document.addEventListener('DOMContentLoaded', function()
 
     
     let stream = null;
+
+    const overlayPaths = {
+    '1': '/public/overlays/frame.png',
+    '2': '/public/overlays/moldura.png',
+    '3': '/public/overlays/fire.png',
+    '4': '/public/overlays/mirror.png',
+    '5': '/public/overlays/sunglasses.png',
+    '6': '/public/overlays/thug.png',
+    '7': '/public/overlays/hat.png',
+    '8': '/public/overlays/mustache.png',
+    '9': '/public/overlays/cat.png',
+    '10': '/public/overlays/bear.png',
+    '11': '/public/overlays/witch.png'
+};
+ 
+
+
+        const overlayImages = {};
+
+        for (const [id, path] of Object.entries(overlayPaths)) 
+        {
+            const img = new Image();
+            img.src = path;
+            overlayImages[id] = img;
+        }
+
+ 
+        // Pré-carregar imagens de sobreposição
+        // document.querySelectorAll('#overlay-select option').forEach(option => 
+        // {
+        //     if (option.value) 
+        //     {
+        //         const img = new Image();
+        //         img.src = `/public/overlays/${option.value}`;
+        //         overlayImages[option.value] = img;
+        //     }
+        // });
+
+        // Função de atualização da pré-visualização (chamada 30x por segundo)
+        function updatePreview() {
+            // Limpar o canvas
+            previewContext.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+            
+            // Desenhar o vídeo no canvas
+            previewContext.drawImage(video, 0, 0, previewCanvas.width, previewCanvas.height);
+            
+            // Aplicar filtro se selecionado
+            const filter = filterSelect.value;
+            if (filter) {
+                applyFilter(previewContext, filter);
+            }
+            
+            
+            const overlayId = overlaySelect.value-5;
+            console.log("Overlay:" +overlayId);
+            if (overlayId && overlayImages[overlayId]) 
+            {
+                const img = overlayImages[overlayId];
+                
+                const width = previewCanvas.width / 2;  // Metade da largura do canvas
+                const height = img.height * (width / img.width);  // Manter proporção
+                const x = (previewCanvas.width - width) / 2;
+                const y = (previewCanvas.height - height) / 2;
+                
+                previewContext.drawImage(img, x, y, width, height);
+            }
+            
+ 
+            requestAnimationFrame(updatePreview);
+        }
+
+      
+            // Função para aplicar filtros ao canvas
+            function applyFilter(ctx, filterType) {
+                const imageData = ctx.getImageData(0, 0, previewCanvas.width, previewCanvas.height);
+                const data = imageData.data;
+                
+                switch (filterType) {
+                    case 'grayscale':
+                        // Converte para escala de cinza (preto e branco)
+                        for (let i = 0; i < data.length; i += 4) {
+                            const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                            data[i] = avg;     // R
+                            data[i + 1] = avg; // G
+                            data[i + 2] = avg; // B
+                        }
+                        break;
+                        
+                    case 'sepia':
+                        // Efeito sépia (tom castanho-amarelado antigo)
+                        for (let i = 0; i < data.length; i += 4) {
+                            const r = data[i];
+                            const g = data[i + 1];
+                            const b = data[i + 2];
+                            
+                            data[i] = Math.min(255, (r * 0.393) + (g * 0.769) + (b * 0.189));     // R
+                            data[i + 1] = Math.min(255, (r * 0.349) + (g * 0.686) + (b * 0.168)); // G
+                            data[i + 2] = Math.min(255, (r * 0.272) + (g * 0.534) + (b * 0.131)); // B
+                        }
+                        break;
+                        
+                    case 'invert':
+                        // Inverte todas as cores
+                        for (let i = 0; i < data.length; i += 4) {
+                            data[i] = 255 - data[i];         // R
+                            data[i + 1] = 255 - data[i + 1]; // G
+                            data[i + 2] = 255 - data[i + 2]; // B
+                        }
+                        break;
+                        
+                    case 'brightness':
+                        // Aumenta o brilho
+                        const brightnessFactor = 50; // Valor entre 0-255
+                        for (let i = 0; i < data.length; i += 4) {
+                            data[i] = Math.min(255, data[i] + brightnessFactor);         // R
+                            data[i + 1] = Math.min(255, data[i + 1] + brightnessFactor); // G
+                            data[i + 2] = Math.min(255, data[i + 2] + brightnessFactor); // B
+                        }
+                        break;
+                        
+                    case 'darkness':
+                        // Diminui o brilho
+                        const darknessFactor = 50; // Valor entre 0-255
+                        for (let i = 0; i < data.length; i += 4) {
+                            data[i] = Math.max(0, data[i] - darknessFactor);         // R
+                            data[i + 1] = Math.max(0, data[i + 1] - darknessFactor); // G
+                            data[i + 2] = Math.max(0, data[i + 2] - darknessFactor); // B
+                        }
+                        break;
+                        
+                    case 'contrast':
+                        // Aumenta o contraste
+                        const contrastFactor = 1.5; // Valores > 1 aumentam o contraste
+                        const contrastOffset = 128 * (1 - contrastFactor);
+                        for (let i = 0; i < data.length; i += 4) {
+                            data[i] = Math.min(255, Math.max(0, data[i] * contrastFactor + contrastOffset));         // R
+                            data[i + 1] = Math.min(255, Math.max(0, data[i + 1] * contrastFactor + contrastOffset)); // G
+                            data[i + 2] = Math.min(255, Math.max(0, data[i + 2] * contrastFactor + contrastOffset)); // B
+                        }
+                        break;
+                        
+                    case 'red':
+                        // Filtro vermelho (aumenta o canal vermelho)
+                        for (let i = 0; i < data.length; i += 4) {
+                            data[i] = Math.min(255, data[i] * 1.5);     // R
+                            data[i + 1] = data[i + 1] * 0.7;            // G
+                            data[i + 2] = data[i + 2] * 0.7;            // B
+                        }
+                        break;
+                        
+                    case 'green':
+                        // Filtro verde (aumenta o canal verde)
+                        for (let i = 0; i < data.length; i += 4) {
+                            data[i] = data[i] * 0.7;                    // R
+                            data[i + 1] = Math.min(255, data[i + 1] * 1.5); // G
+                            data[i + 2] = data[i + 2] * 0.7;            // B
+                        }
+                        break;
+                        
+                    case 'blue':
+                        // Filtro azul (aumenta o canal azul)
+                        for (let i = 0; i < data.length; i += 4) {
+                            data[i] = data[i] * 0.7;                    // R
+                            data[i + 1] = data[i + 1] * 0.7;            // G
+                            data[i + 2] = Math.min(255, data[i + 2] * 1.5); // B
+                        }
+                        break;
+                        
+                    case 'blur':
+                        // Efeito de desfoque simples
+          
+                        const tempData = new Uint8ClampedArray(data);
+                        const blurRadius = 1;
+                        for (let y = blurRadius; y < previewCanvas.height - blurRadius; y++) {
+                            for (let x = blurRadius; x < previewCanvas.width - blurRadius; x++) {
+                                let r = 0, g = 0, b = 0, count = 0;
+                                
+  
+                                for (let dy = -blurRadius; dy <= blurRadius; dy++) {
+                                    for (let dx = -blurRadius; dx <= blurRadius; dx++) {
+                                        const index = ((y + dy) * previewCanvas.width + (x + dx)) * 4;
+                                        r += tempData[index];
+                                        g += tempData[index + 1];
+                                        b += tempData[index + 2];
+                                        count++;
+                                    }
+                                }
+                                
+                                // Atualiza o pixel com a média
+                                const targetIndex = (y * previewCanvas.width + x) * 4;
+                                data[targetIndex] = r / count;
+                                data[targetIndex + 1] = g / count;
+                                data[targetIndex + 2] = b / count;
+                            }
+                        }
+                        break;
+                        
+                    case 'threshold':
+                        // Efeito preto e branco com limiar
+                        const threshold = 128; // Valor entre 0-255
+                        for (let i = 0; i < data.length; i += 4) {
+                            const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                            const value = avg > threshold ? 255 : 0;
+                            data[i] = value;     // R
+                            data[i + 1] = value; // G
+                            data[i + 2] = value; // B
+                        }
+                        break;
+                        
+                    case 'vintage':
+                        for (let i = 0; i < data.length; i += 4) 
+                        {
+                            // Primeiro aplica um efeito sépia mais suave
+                            const r = data[i];
+                            const g = data[i + 1];
+                            const b = data[i + 2];
+                            
+                            data[i] = Math.min(255, (r * 0.393) + (g * 0.769) + (b * 0.189));     // R
+                            data[i + 1] = Math.min(255, (r * 0.349) + (g * 0.686) + (b * 0.168)); // G
+                            data[i + 2] = Math.min(255, (r * 0.272) + (g * 0.534) + (b * 0.131)); // B
+                            
+                            // Depois reduz um pouco a saturação
+                            const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                            data[i] = data[i] * 0.9 + avg * 0.1;
+                            data[i + 1] = data[i + 1] * 0.9 + avg * 0.1;
+                            data[i + 2] = data[i + 2] * 0.9 + avg * 0.1;
+                        }
+                        break;
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+            }
+ 
+      
+
+
     async function startWebcam() 
     {
         try 
@@ -254,6 +498,7 @@ document.addEventListener('DOMContentLoaded', function()
     
     // Iniciar a webcam quando a página carrega
     startWebcam();
+    updatePreview();
     
     // Capturar imagem da webcam
     snap.addEventListener('click', function()

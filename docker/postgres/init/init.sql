@@ -62,7 +62,6 @@ INSERT INTO overlay_images (name, filepath) VALUES
 ('Moldura', 'public/overlays/moldura.png'),
 ('Fire', 'public/overlays/fire.png'),
 ('Mirror', 'public/overlays/mirror.png'),
-
 ('Sunglasses', 'public/overlays/sunglasses.png'),
 ('Thug Life', 'public/overlays/thug.png'),
 ('Hat', 'public/overlays/hat.png'),
