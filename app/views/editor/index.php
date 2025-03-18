@@ -255,16 +255,21 @@ document.addEventListener('DOMContentLoaded', function()
         // });
 
         // Função de atualização da pré-visualização (chamada 30x por segundo)
-        function updatePreview() {
-            // Limpar o canvas
+        function updatePreview() 
+        {
+        
+            
             previewContext.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
             
-            // Desenhar o vídeo no canvas
+
+            
             previewContext.drawImage(video, 0, 0, previewCanvas.width, previewCanvas.height);
             
-            // Aplicar filtro se selecionado
+
+            
             const filter = filterSelect.value;
-            if (filter) {
+            if (filter) 
+            {
                 applyFilter(previewContext, filter);
             }
             
@@ -275,8 +280,8 @@ document.addEventListener('DOMContentLoaded', function()
             {
                 const img = overlayImages[overlayId];
                 
-                const width = previewCanvas.width / 2;  // Metade da largura do canvas
-                const height = img.height * (width / img.width);  // Manter proporção
+                const width = previewCanvas.width / 2;  
+                const height = img.height * (width / img.width);  
                 const x = (previewCanvas.width - width) / 2;
                 const y = (previewCanvas.height - height) / 2;
                 
@@ -288,14 +293,16 @@ document.addEventListener('DOMContentLoaded', function()
         }
 
       
-            // Função para aplicar filtros ao canvas
-            function applyFilter(ctx, filterType) {
+ 
+            function applyFilter(ctx, filterType)
+             {
                 const imageData = ctx.getImageData(0, 0, previewCanvas.width, previewCanvas.height);
                 const data = imageData.data;
                 
-                switch (filterType) {
+                switch (filterType) 
+                {
                     case 'grayscale':
-                        // Converte para escala de cinza (preto e branco)
+      
                         for (let i = 0; i < data.length; i += 4) {
                             const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
                             data[i] = avg;     // R
@@ -305,8 +312,9 @@ document.addEventListener('DOMContentLoaded', function()
                         break;
                         
                     case 'sepia':
-                        // Efeito sépia (tom castanho-amarelado antigo)
-                        for (let i = 0; i < data.length; i += 4) {
+                
+                        for (let i = 0; i < data.length; i += 4) 
+                        {
                             const r = data[i];
                             const g = data[i + 1];
                             const b = data[i + 2];
@@ -318,8 +326,9 @@ document.addEventListener('DOMContentLoaded', function()
                         break;
                         
                     case 'invert':
-                        // Inverte todas as cores
-                        for (let i = 0; i < data.length; i += 4) {
+                  
+                        for (let i = 0; i < data.length; i += 4)
+                         {
                             data[i] = 255 - data[i];         // R
                             data[i + 1] = 255 - data[i + 1]; // G
                             data[i + 2] = 255 - data[i + 2]; // B
@@ -329,7 +338,8 @@ document.addEventListener('DOMContentLoaded', function()
                     case 'brightness':
                         // Aumenta o brilho
                         const brightnessFactor = 50; // Valor entre 0-255
-                        for (let i = 0; i < data.length; i += 4) {
+                        for (let i = 0; i < data.length; i += 4) 
+                        {
                             data[i] = Math.min(255, data[i] + brightnessFactor);         // R
                             data[i + 1] = Math.min(255, data[i + 1] + brightnessFactor); // G
                             data[i + 2] = Math.min(255, data[i + 2] + brightnessFactor); // B
@@ -339,7 +349,8 @@ document.addEventListener('DOMContentLoaded', function()
                     case 'darkness':
                         // Diminui o brilho
                         const darknessFactor = 50; // Valor entre 0-255
-                        for (let i = 0; i < data.length; i += 4) {
+                        for (let i = 0; i < data.length; i += 4) 
+                        {
                             data[i] = Math.max(0, data[i] - darknessFactor);         // R
                             data[i + 1] = Math.max(0, data[i + 1] - darknessFactor); // G
                             data[i + 2] = Math.max(0, data[i + 2] - darknessFactor); // B
@@ -350,100 +361,17 @@ document.addEventListener('DOMContentLoaded', function()
                         // Aumenta o contraste
                         const contrastFactor = 1.5; // Valores > 1 aumentam o contraste
                         const contrastOffset = 128 * (1 - contrastFactor);
-                        for (let i = 0; i < data.length; i += 4) {
+                        for (let i = 0; i < data.length; i += 4)
+                         {
                             data[i] = Math.min(255, Math.max(0, data[i] * contrastFactor + contrastOffset));         // R
                             data[i + 1] = Math.min(255, Math.max(0, data[i + 1] * contrastFactor + contrastOffset)); // G
                             data[i + 2] = Math.min(255, Math.max(0, data[i + 2] * contrastFactor + contrastOffset)); // B
                         }
                         break;
                         
-                    case 'red':
-                        // Filtro vermelho (aumenta o canal vermelho)
-                        for (let i = 0; i < data.length; i += 4) {
-                            data[i] = Math.min(255, data[i] * 1.5);     // R
-                            data[i + 1] = data[i + 1] * 0.7;            // G
-                            data[i + 2] = data[i + 2] * 0.7;            // B
-                        }
-                        break;
-                        
-                    case 'green':
-                        // Filtro verde (aumenta o canal verde)
-                        for (let i = 0; i < data.length; i += 4) {
-                            data[i] = data[i] * 0.7;                    // R
-                            data[i + 1] = Math.min(255, data[i + 1] * 1.5); // G
-                            data[i + 2] = data[i + 2] * 0.7;            // B
-                        }
-                        break;
-                        
-                    case 'blue':
-                        // Filtro azul (aumenta o canal azul)
-                        for (let i = 0; i < data.length; i += 4) {
-                            data[i] = data[i] * 0.7;                    // R
-                            data[i + 1] = data[i + 1] * 0.7;            // G
-                            data[i + 2] = Math.min(255, data[i + 2] * 1.5); // B
-                        }
-                        break;
-                        
-                    case 'blur':
-                        // Efeito de desfoque simples
-          
-                        const tempData = new Uint8ClampedArray(data);
-                        const blurRadius = 1;
-                        for (let y = blurRadius; y < previewCanvas.height - blurRadius; y++) {
-                            for (let x = blurRadius; x < previewCanvas.width - blurRadius; x++) {
-                                let r = 0, g = 0, b = 0, count = 0;
-                                
-  
-                                for (let dy = -blurRadius; dy <= blurRadius; dy++) {
-                                    for (let dx = -blurRadius; dx <= blurRadius; dx++) {
-                                        const index = ((y + dy) * previewCanvas.width + (x + dx)) * 4;
-                                        r += tempData[index];
-                                        g += tempData[index + 1];
-                                        b += tempData[index + 2];
-                                        count++;
-                                    }
-                                }
-                                
-                                // Atualiza o pixel com a média
-                                const targetIndex = (y * previewCanvas.width + x) * 4;
-                                data[targetIndex] = r / count;
-                                data[targetIndex + 1] = g / count;
-                                data[targetIndex + 2] = b / count;
-                            }
-                        }
-                        break;
-                        
-                    case 'threshold':
-                        // Efeito preto e branco com limiar
-                        const threshold = 128; // Valor entre 0-255
-                        for (let i = 0; i < data.length; i += 4) {
-                            const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                            const value = avg > threshold ? 255 : 0;
-                            data[i] = value;     // R
-                            data[i + 1] = value; // G
-                            data[i + 2] = value; // B
-                        }
-                        break;
-                        
-                    case 'vintage':
-                        for (let i = 0; i < data.length; i += 4) 
-                        {
-                            // Primeiro aplica um efeito sépia mais suave
-                            const r = data[i];
-                            const g = data[i + 1];
-                            const b = data[i + 2];
-                            
-                            data[i] = Math.min(255, (r * 0.393) + (g * 0.769) + (b * 0.189));     // R
-                            data[i + 1] = Math.min(255, (r * 0.349) + (g * 0.686) + (b * 0.168)); // G
-                            data[i + 2] = Math.min(255, (r * 0.272) + (g * 0.534) + (b * 0.131)); // B
-                            
-                            // Depois reduz um pouco a saturação
-                            const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                            data[i] = data[i] * 0.9 + avg * 0.1;
-                            data[i + 1] = data[i + 1] * 0.9 + avg * 0.1;
-                            data[i + 2] = data[i + 2] * 0.9 + avg * 0.1;
-                        }
-                        break;
+                  
+                 
+
                 }
                 
                 ctx.putImageData(imageData, 0, 0);
