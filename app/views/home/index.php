@@ -82,8 +82,8 @@
                                     <div class="content">
                                         <p>Uma criação de <?= htmlspecialchars($image['username']) ?></p>
                                         <div class="is-flex is-justify-content-space-between">
-                                            <span><i class="fas fa-heart"></i> <?= $image['likes_count'] ?></span>
-                                            <span><i class="fas fa-comment"></i> <?= $image['comments_count'] ?></span>
+                                            <span><i class="far fa-heart"></i> <?= $image['likes_count'] ?></span>
+                                            <span><i class="far fa-comment"></i> <?= $image['comments_count'] ?></span>
                                         </div>
                                     </div>
                                 </div>

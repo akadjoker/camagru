@@ -32,17 +32,21 @@
                                 <div class="level">
                                     <div class="level-left">
                                         <div class="level-item">
-                                            <span class="icon-text">
-                                                <span class="icon has-text-danger">
-                                                    <i class="fas <?= $image['is_liked'] ? 'fa-heart' : 'fa-heart-o' ?>"></i>
-                                                </span>
-                                                <span><?= $image['likes_count'] ?></span>
-                                            </span>
+                                        <span class="icon-text">
+                                        <span class="icon has-text-danger">
+                                            <?php if ($image['is_liked']): ?>
+                                                <i class="fas fa-heart"></i>  
+                                            <?php else: ?>
+                                                <i class="far fa-heart"></i>  
+                                            <?php endif; ?>
+                                        </span>
+                                        <span><?= $image['likes_count'] ?></span>
+                                    </span>
                                         </div>
                                         <div class="level-item">
                                             <span class="icon-text">
                                                 <span class="icon has-text-info">
-                                                    <i class="fas fa-comment"></i>
+                                                    <i class="far fa-comment"></i>
                                                 </span>
                                                 <span><?= $image['comments_count'] ?></span>
                                             </span>

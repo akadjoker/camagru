@@ -33,8 +33,8 @@
                                     <form method="POST" action="/?controller=gallery&action=like" class="level-item">
                                         <input type="hidden" name="image_id" value="<?= $image['id'] ?>">
                                         <button type="submit" class="button is-small <?= $image['is_liked'] ? 'is-danger' : 'is-light' ?>">
-                                            <span class="icon">
-                                                <i class="fas <?= $image['is_liked'] ? 'fa-heart' : 'fa-heart-o' ?>"></i>
+                                            <span class="icon <?= $image['is_liked'] ? 'has-text-white' : 'has-text-danger' ?>">
+                                                <i class="far <?= $image['is_liked'] ? 'fa-heart' : 'fa-heart' ?>"></i>
                                             </span>
                                             <span><?= $image['likes_count'] ?></span>
                                         </button>
@@ -43,7 +43,7 @@
                                     <div class="level-item">
                                         <span class="icon-text">
                                             <span class="icon has-text-danger">
-                                                <i class="fas fa-heart"></i>
+                                                <i class="far fa-heart"></i>
                                             </span>
                                             <span><?= $image['likes_count'] ?></span>
                                         </span>
@@ -67,7 +67,7 @@
                                             window.location.href='/?controller=editor&action=delete&id=<?= $image['id'] ?>'
                                         })">
                                         <span class="icon">
-                                            <i class="fas fa-trash"></i>
+                                            <i class="far fa-trash"></i>
                                         </span>
                                         <span>Apagar</span>
                                     </button>
