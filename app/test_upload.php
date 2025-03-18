@@ -3,7 +3,7 @@
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['test_file'])) {
     $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/public/uploads/';
     
-    // Garantir que o diretório existe
+ 
     if (!file_exists($uploadDir)) {
         mkdir($uploadDir, 0777, true);
     }

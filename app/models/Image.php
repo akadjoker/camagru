@@ -1,5 +1,5 @@
 <?php
-// app/models/Image.php
+ 
 
 class Image extends BaseModel 
 {
@@ -15,7 +15,7 @@ class Image extends BaseModel
     public $comments_count; // Para contar comentários
     public $is_liked; // Para verificar se o utilizador atual deu like
     
-    // Obtém todas as imagens para a galeria (com paginação)
+ 
     public function getAllImages($page = 1, $limit = 5) 
     {
         $offset = ($page - 1) * $limit;
@@ -34,7 +34,7 @@ class Image extends BaseModel
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    // Conta o total de imagens para paginação
+ 
     public function countAllImages() 
     {
         $query = "SELECT COUNT(*) as total FROM " . $this->table;
@@ -44,7 +44,7 @@ class Image extends BaseModel
         return $row['total'];
     }
     
-    // Obtém uma imagem pelo ID
+ 
     public function getImageById($id) 
     {
         $query = "SELECT i.*, u.username 
@@ -70,7 +70,7 @@ class Image extends BaseModel
         return false;
     }
     
-    // Verifica se o utilizador deu like na imagem
+ 
     public function isLikedByUser($image_id, $user_id) 
     {
         $query = "SELECT id FROM likes 
@@ -84,7 +84,7 @@ class Image extends BaseModel
         return $stmt->rowCount() > 0;
     }
     
-    // Conta o número de likes para uma imagem
+ 
     public function countLikes($image_id) 
     {
         $query = "SELECT COUNT(*) as total FROM likes WHERE image_id = :image_id";
@@ -97,7 +97,7 @@ class Image extends BaseModel
         return $row['total'];
     }
     
-    // Adiciona ou remove um like
+ 
     public function toggleLike($image_id, $user_id) 
     {
         if ($this->isLikedByUser($image_id, $user_id)) 
@@ -126,7 +126,7 @@ class Image extends BaseModel
         }
     }
     
-    // Obtém os comentários de uma imagem
+ 
     public function getComments($image_id) 
     {
         $query = "SELECT c.*, u.username 
@@ -142,7 +142,7 @@ class Image extends BaseModel
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    // Adiciona um comentário
+ 
     public function addComment($image_id, $user_id, $comment) 
     {
         $query = "INSERT INTO comments (image_id, user_id, comment) 
@@ -163,7 +163,7 @@ class Image extends BaseModel
         return false;
     }
     
-    // Notifica o dono da imagem sobre um novo comentário
+ 
     private function notifyImageOwner($image_id, $commenter_id) 
     {
         // Obtém informações da imagem e do dono
@@ -200,7 +200,7 @@ class Image extends BaseModel
         }
     }
     
-    // Conta o número de comentários para uma imagem
+ 
     public function countComments($image_id) 
     {
         $query = "SELECT COUNT(*) as total FROM comments WHERE image_id = :image_id";
@@ -214,7 +214,7 @@ class Image extends BaseModel
     }
 
 
-// Salva uma imagem na base de dados
+ 
 public function saveImage($user_id, $filepath) 
 {
     $query = "INSERT INTO " . $this->table . " (user_id, filepath) 
@@ -236,8 +236,7 @@ public function saveImage($user_id, $filepath)
     return false;
 }
 
-// Apaga uma imagem
-public function deleteImage($id, $user_id) 
+ public function deleteImage($id, $user_id) 
 {
     // Primeiro verifica se a imagem pertence ao utilizador
     $query = "SELECT filepath FROM " . $this->table . " 

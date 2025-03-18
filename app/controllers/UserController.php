@@ -1,5 +1,6 @@
 <?php
-// Controlador de utilizadores
+
+
 
 class UserController extends BaseController 
 {
@@ -10,24 +11,28 @@ class UserController extends BaseController
         $this->userModel = new User();
     }
     
-    // Página de registo
+   
+    
     public function register() 
     {
-        // Se já estiver autenticado, redireciona para a página inicial
+        
+        
         if (isset($_SESSION['user_id'])) 
         {
             $this->redirect('/');
             return;
         }
         
-        // Se não for um pedido POST, mostra o formulário
+
+        
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') 
         {
             $this->render('user/register', ['pageTitle' => 'Registo']);
             return;
         }
         
-        // Validação dos dados do formulário
+    
+        
         $errors = [];
         
         // Valida nome de utilizador
@@ -114,7 +119,7 @@ class UserController extends BaseController
         }
     }
     
-    // Página de sucesso após registo
+ 
     public function registerSuccess() 
     {
         $this->render('user/register-success', ['pageTitle' => 'Registo Concluído']);
@@ -147,7 +152,8 @@ class UserController extends BaseController
         
         return mail($email, $subject, $message, $headers);
     }
-    // Verifica a conta com o token
+  
+    
     public function verify() 
     {
         if (!isset($_GET['token'])) 
@@ -168,7 +174,7 @@ class UserController extends BaseController
         }
     }
     
-    // Página de login
+ 
     public function login() 
     {
         // Se já estiver autenticado, redireciona para a página inicial
@@ -178,7 +184,7 @@ class UserController extends BaseController
             return;
         }
         
-        // Se não for um pedido POST, mostra o formulário
+        // Se não for um pedido POST, mostra o fom
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') 
         {
             $this->render('user/login', ['pageTitle' => 'Login']);
@@ -233,31 +239,31 @@ class UserController extends BaseController
         }
     }
     
-    // Sair da conta
+ 
     public function logout() 
     {
-        // Limpa as variáveis de sessão
+      
         unset($_SESSION['user_id']);
         unset($_SESSION['username']);
         
-        // Destrói a sessão
+ 
         session_destroy();
         
-        // Redireciona para a página inicial
+ 
         $this->redirect('/');
     }
     
-    // Página de recuperação de password
+ 
     public function forgotPassword() 
     {
-        // Se já estiver autenticado, redireciona
+       
         if (isset($_SESSION['user_id'])) 
         {
             $this->redirect('/');
             return;
         }
         
-        // Se não for um pedido POST, mostra o formulário
+ 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') 
         {
             $this->render('user/forgot-password', ['pageTitle' => 'Recuperar Password']);
@@ -296,7 +302,7 @@ class UserController extends BaseController
         $this->render('user/forgot-password-success', ['pageTitle' => 'Email Enviado']);
     }
     
-    // Envia email de recuperação de password
+ 
     private function sendPasswordResetEmail($email, $token) 
     {
         $subject = "Recuperação de Password - Camagru";
@@ -307,17 +313,17 @@ class UserController extends BaseController
         mail($email, $subject, $message, $headers);
     }
     
-    // Página de redefinição de password
+ 
     public function resetPassword() 
     {
-        // Se já estiver autenticado, redireciona
+ 
         if (isset($_SESSION['user_id'])) 
         {
             $this->redirect('/');
             return;
         }
         
-        // Verifica se o token foi fornecido
+ 
         if (!isset($_GET['token'])) 
         {
             $this->redirect('/');
@@ -326,14 +332,14 @@ class UserController extends BaseController
         
         $token = $_GET['token'];
         
-        // Verifica se o token é válido
+ 
         if (!$this->userModel->isValidResetToken($token)) 
         {
             $this->render('user/reset-password-error', ['pageTitle' => 'Link Inválido']);
             return;
         }
         
-        // Se não for um pedido POST, mostra o formulário
+ 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') 
         {
             $this->render('user/reset-password', [
@@ -451,20 +457,20 @@ public function changePassword()
     }
 }
 
-// Página de perfil do utilizador
+
 public function profile() 
 {
-    // Verifica se o utilizador está autenticado
+
     if (!isset($_SESSION['user_id'])) 
     {
         $this->redirect('/?controller=user&action=login');
         return;
     }
     
-    // Carrega os dados do utilizador
+
     $this->userModel->getUserById($_SESSION['user_id']);
     
-    // Se for um pedido POST, atualiza o perfil
+
     if ($_SERVER['REQUEST_METHOD'] === 'POST') 
     {
         // Validação dos dados
@@ -501,7 +507,7 @@ public function profile()
             return;
         }
         
-        // Atualiza os dados do utilizador
+
         $oldUsername = $this->userModel->username;
         $oldEmail = $this->userModel->email;
         
@@ -545,7 +551,8 @@ public function profile()
         return;
     }
     
-    // Mostra o formulário com os dados atuais
+
+    
     $this->render('user/profile', [
         'pageTitle' => 'Perfil',
         'user' => $this->userModel

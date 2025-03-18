@@ -1,7 +1,8 @@
 <?php
 
 
-class Database {
+class Database 
+{
     private $host;
     private $port;
     private $db_name;
@@ -9,7 +10,8 @@ class Database {
     private $password;
     private $conn;
 
-    public function __construct() {
+    public function __construct() 
+    {
         $this->host = getenv('DB_HOST');
         $this->port = getenv('DB_PORT');
         $this->db_name = getenv('DB_NAME');
@@ -17,14 +19,17 @@ class Database {
         $this->password = getenv('DB_PASSWORD');
     }
 
-    public function getConnection() {
+    public function getConnection() 
+    {
         $this->conn = null;
 
-        try {
+        try
+         {
             $dsn = "pgsql:host={$this->host};port={$this->port};dbname={$this->db_name}";
             $this->conn = new PDO($dsn, $this->username, $this->password);
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        } catch(PDOException $e) {
+        } catch(PDOException $e)
+         {
             echo "Erro de conexão: " . $e->getMessage();
         }
 

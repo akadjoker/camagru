@@ -1,10 +1,8 @@
 <?php
-// app/test_frames.php
-
-// Inclui o ficheiro de configuração da base de dados
+ 
 require_once 'config/database.php';
 
-// Função para obter todos os overlays da base de dados
+ 
 function getAllOverlays() {
     $database = new Database();
     $db = $database->getConnection();
@@ -15,7 +13,7 @@ function getAllOverlays() {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// Obtém todos os overlays
+ 
 $overlays = getAllOverlays();
 ?>
 

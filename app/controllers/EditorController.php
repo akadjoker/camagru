@@ -339,7 +339,8 @@ public function upload()
     exit;
 }
 
-// Aplica uma imagem de sobreposição a outra imagem
+
+
     private function applyOverlay($baseImagePath, $overlayPath) 
     {
         // Carrega as imagens
@@ -361,29 +362,35 @@ public function upload()
             return false;
         }
         
-        $overlay = imagecreatefrompng($overlayPath); // Assume que todas as sobreposições são PNG com transparência
+        $overlay = imagecreatefrompng($overlayPath); 
         
-        // Obtém as dimensões das imagens
+        
+     
+        
         $baseWidth = imagesx($baseImage);
         $baseHeight = imagesy($baseImage);
         $overlayWidth = imagesx($overlay);
         $overlayHeight = imagesy($overlay);
+
         
-        // Redimensiona a sobreposição para se ajustar à imagem base, mantendo a proporção
-        $newWidth = $baseWidth / 2; // Exemplo: metade da largura da imagem base
+        $newWidth = $baseWidth / 2; 
+        
         $newHeight = $overlayHeight * ($newWidth / $overlayWidth);
         
-        // Posição para centrar a sobreposição
+     
+        
         $posX = ($baseWidth - $newWidth) / 2;
         $posY = ($baseHeight - $newHeight) / 2;
         
-        // Combina as imagens
+
+        
         imagecopyresampled(
             $baseImage, $overlay,
             (int)$posX, (int)$posY, 0, 0,
             (int)$newWidth, (int)$newHeight, $overlayWidth, $overlayHeight
         );
-        // Guarda a imagem combinada
+    
+        
         if ($extension === 'png') 
         {
             imagepng($baseImage, $baseImagePath);
@@ -397,24 +404,28 @@ public function upload()
             imagegif($baseImage, $baseImagePath);
         }
         
-        // Liberta a memória
+     
+        
         imagedestroy($baseImage);
         imagedestroy($overlay);
         
         return true;
     }
     
-    // Apaga uma imagem
+   
+    
     public function delete() 
     {
-        // Verifica se o utilizador está autenticado
+ 
+        
         if (!isset($_SESSION['user_id'])) 
         {
             $this->redirect('/?controller=user&action=login');
             return;
         }
         
-        // Verifica se o ID da imagem foi fornecido
+       
+        
         if (!isset($_GET['id'])) 
         {
             $this->redirect('/?controller=editor');
@@ -423,15 +434,18 @@ public function upload()
         
         $image_id = (int)$_GET['id'];
         
-        // Tenta apagar a imagem
+
+        
         if ($this->imageModel->deleteImage($image_id, $_SESSION['user_id'])) 
         {
-            // Redireciona de volta para o editor
+
+            
             $this->redirect('/?controller=editor&success=deleted');
         } 
         else 
         {
-            // Redireciona com erro
+ 
+            
             $this->redirect('/?controller=editor&error=delete_failed');
         }
     }

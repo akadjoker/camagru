@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     
 
-    <link rel="stylesheet" href="/css/custom.css">
+    <!-- <link rel="stylesheet" href="/css/custom.css"> -->
 </head>
 <body>
     <!-- Navegação -->
@@ -31,7 +31,7 @@
             </div>
             
             <div id="navMenu" class="navbar-menu">
-                <!-- No navbar-end, substitui o conteúdo existente por: -->
+
                 <div class="navbar-end">
                     <a href="/" class="navbar-item">
                         <span class="icon"><i class="fas fa-home"></i></span>
