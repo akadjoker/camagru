@@ -1,452 +1,300 @@
 <?php
 
+class EditorController {
 
-class EditorController extends BaseController 
-{
-    private $overlayModel;
-    private $imageModel;
-    
-    public function __construct() 
-    {
-        $this->overlayModel = new Overlay();
-        $this->imageModel = new Image();
+    public function index() {
+        global $pdo;
+
+        $recentImages = [];
+        if (isset($_SESSION['user_id'])) {
+            $stmt = $pdo->prepare("SELECT * FROM images WHERE user_id = :user_id ORDER BY created_at DESC LIMIT 6");
+            $stmt->execute(['user_id' => $_SESSION['user_id']]);
+            $recentImages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        include 'views/editor.php';
     }
     
-  
-    public function index() 
-    {
-   
-        if (!isset($_SESSION['user_id'])) 
-        {
-            $this->redirect('/?controller=user&action=login');
-            return;
+
+    public function upload_fit() {
+        global $pdo;
+
+        if (!isset($_SESSION['user_id'])) {
+            header("Location: ?page=login");
+            exit;
         }
-        
-    
-        $overlays = $this->overlayModel->getAllOverlays();
-        
-   
-        $userImages = $this->imageModel->getUserImages($_SESSION['user_id']);
-        
-   
-        $this->render('editor/index', [
-            'pageTitle' => 'Editor de Imagens',
-            'overlays' => $overlays,
-            'userImages' => $userImages
+
+        // Validação do upload
+        if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+            die("Erro no upload da imagem.");
+        }
+
+        $tmpPath = $_FILES['image']['tmp_name'];
+        $ext = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, ['jpg', 'jpeg', 'png'])) {
+            die("Formato inválido. Usa JPG ou PNG.");
+        }
+
+        // Criar diretório de uploads se não existir
+        if (!is_dir('uploads')) {
+            mkdir('uploads');
+        }
+
+        $newFilename = 'uploads/' . uniqid() . '.png'; // Vamos salvar sempre em PNG
+
+        // --------------------
+        // Resize imagem base
+        // --------------------
+
+        list($width, $height) = getimagesize($tmpPath);
+        $minSize = 64;
+        $maxSize = 512;
+
+        $scale = 1;
+        if ($width < $minSize || $height < $minSize) {
+            $scale = max($minSize / $width, $minSize / $height);
+        } elseif ($width > $maxSize || $height > $maxSize) {
+            $scale = min($maxSize / $width, $maxSize / $height);
+        }
+
+        // Criar imagem base
+        if (in_array($ext, ['jpg', 'jpeg'])) {
+            $srcImage = imagecreatefromjpeg($tmpPath);
+        } else {
+            $srcImage = imagecreatefrompng($tmpPath);
+        }
+
+        // if ($scale != 1) {
+        //     $newWidth = round($width * $scale);
+        //     $newHeight = round($height * $scale);
+
+        //     $resizedImage = imagecreatetruecolor($newWidth, $newHeight);
+        //     imagecopyresampled($resizedImage, $srcImage, 0, 0, 0, 0,
+        //         $newWidth, $newHeight, $width, $height);
+        //     imagedestroy($srcImage);
+        //     $srcImage = $resizedImage;
+        //     $width = $newWidth;
+        //     $height = $newHeight;
+        // }
+
+        // --------------------
+        // Preparar overlay
+        // --------------------
+
+        $overlayPath = $_POST['overlay'] ?? '';
+        if ($overlayPath && file_exists(ltrim($overlayPath, '/'))) {
+            $overlayFullPath = ltrim($overlayPath, '/');
+            $overlayImage = imagecreatefrompng($overlayFullPath);
+
+            // Redimensionar overlay
+            $overlayWidth = imagesx($overlayImage);
+            $overlayHeight = imagesy($overlayImage);
+            $newOverlayWidth = intval($_POST['overlay_scale'] ?? 100);
+            $scaleFactor = $newOverlayWidth / $overlayWidth;
+            $newOverlayHeight = intval($overlayHeight * $scaleFactor);
+
+            $resizedOverlay = imagecreatetruecolor($newOverlayWidth, $newOverlayHeight);
+            imagealphablending($resizedOverlay, false);
+            imagesavealpha($resizedOverlay, true);
+            $transparent = imagecolorallocatealpha($resizedOverlay, 0, 0, 0, 127);
+            imagefill($resizedOverlay, 0, 0, $transparent);
+
+            imagecopyresampled($resizedOverlay, $overlayImage, 0, 0, 0, 0,
+                $newOverlayWidth, $newOverlayHeight,
+                $overlayWidth, $overlayHeight);
+
+            imagedestroy($overlayImage);
+
+            // --------------------
+            // Colar overlay na base
+            // --------------------
+
+            $posX = intval($_POST['overlay_x'] ?? 0);
+            $posY = intval($_POST['overlay_y'] ?? 0);
+
+            imagealphablending($srcImage, true);
+            imagesavealpha($srcImage, true);
+
+            imagecopy($srcImage, $resizedOverlay, $posX, $posY, 0, 0,
+                $newOverlayWidth, $newOverlayHeight);
+
+            imagedestroy($resizedOverlay);
+        }
+
+        // --------------------
+        // Aplicar filtro NA IMAGEM FINAL COMPLETA
+        // --------------------
+
+        $filter = $_POST['filter'] ?? '';
+        switch ($filter) {
+            case 'grayscale':
+                imagefilter($srcImage, IMG_FILTER_GRAYSCALE);
+                break;
+            case 'sepia':
+                imagefilter($srcImage, IMG_FILTER_GRAYSCALE);
+                imagefilter($srcImage, IMG_FILTER_COLORIZE, 90, 60, 40);
+                break;
+            case 'invert':
+                imagefilter($srcImage, IMG_FILTER_NEGATE);
+                break;
+            case 'brightness':
+                imagefilter($srcImage, IMG_FILTER_BRIGHTNESS, 50);
+                break;
+            // Nenhum filtro = não faz nada
+        }
+
+        // --------------------
+        // guardae imagem final
+        // --------------------
+
+        imagepng($srcImage, $newFilename);
+        imagedestroy($srcImage);
+
+        // --------------------
+        // Gravar no banco de dados
+        // --------------------
+
+        $stmt = $pdo->prepare("INSERT INTO images (user_id, filename) VALUES (:user_id, :filename)");
+        $stmt->execute([
+            'user_id' => $_SESSION['user_id'],
+            'filename' => $newFilename
         ]);
-    }
 
-
-private function applyFilter($imagePath, $filter) 
-{
-   
-    
-    if (!file_exists($imagePath))
-     {
-        return false;
-    }
-    
-
-    
-    $extension = pathinfo($imagePath, PATHINFO_EXTENSION);
-    if ($extension === 'png') 
-    {
-        $image = imagecreatefrompng($imagePath);
-    } elseif ($extension === 'jpg' || $extension === 'jpeg') 
-    {
-        $image = imagecreatefromjpeg($imagePath);
-    } elseif ($extension === 'gif') 
-    {
-        $image = imagecreatefromgif($imagePath);
-    } else 
-    {
-        return false;
-    }
-    
-
-    
-    switch ($filter) 
-    {
-        case 'grayscale':
-            imagefilter($image, IMG_FILTER_GRAYSCALE);
-            break;
-        case 'sepia':
-      
-            
-            imagefilter($image, IMG_FILTER_GRAYSCALE);
-            imagefilter($image, IMG_FILTER_COLORIZE, 90, 60, 30);
-            break;
-        case 'invert':
-            imagefilter($image, IMG_FILTER_NEGATE);
-            break;
-        case 'brightness':
-            imagefilter($image, IMG_FILTER_BRIGHTNESS, 30);
-            break;
-        case 'contrast':
-            imagefilter($image, IMG_FILTER_CONTRAST, -10);
-            break;
-    }
-    
-
-    
-    if ($extension === 'png')
-     {
-        imagepng($image, $imagePath);
-    } elseif ($extension === 'jpg' || $extension === 'jpeg') 
-    {
-        imagejpeg($image, $imagePath);
-    } elseif ($extension === 'gif') 
-    {
-        imagegif($image, $imagePath);
-    }
-    
-
-    imagedestroy($image);
-    
-    return true;
-}
-
-// public function upload() 
-// {
-
-//     if (!isset($_SESSION['user_id'])) 
-//     {
-//         header('Content-Type: application/json');
-//         echo json_encode(['error' => 'Não autorizado']);
-//         exit;
-//     }
-    
-
-//     $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/public/uploads/';
-    
-
-//     if (!file_exists($uploadDir)) 
-//     {
-//         mkdir($uploadDir, 0777, true);
-//     }
-    
-
-//     if (isset($_POST['webcam_image'])) 
-//     {
-//         // Upload via webcam (base64)
-//         $img = $_POST['webcam_image'];
-//         $img = str_replace('data:image/png;base64,', '', $img);
-//         $img = str_replace(' ', '+', $img);
-//         $data = base64_decode($img);
-        
-//         // Gera um nome único para o ficheiro
-//         $filename = uniqid() . '.png';
-//         $filepath = '/public/uploads/' . $filename;
-//         $fullPath = $_SERVER['DOCUMENT_ROOT'] . $filepath;
-        
-//         // Guarda a imagem
-//         file_put_contents($fullPath, $data);
-        
-//         if (isset($_POST['overlay_id']) && !empty($_POST['overlay_id'])) 
-//         {
-//             $overlay_id = (int)$_POST['overlay_id'];
-//             if ($this->overlayModel->getOverlayById($overlay_id)) 
-//             {
-//                 $this->applyOverlay($fullPath, $_SERVER['DOCUMENT_ROOT'] . $this->overlayModel->filepath);
-//             }
-//         }
-
- 
-//         if (isset($_POST['filter']) && !empty($_POST['filter'])) 
-//         {
-//             $filter = $_POST['filter'];
-//             $this->applyFilter($fullPath, $filter);
-//         }
-
-//     } 
-//     elseif (isset($_FILES['file_image'])) 
-//     {
-   
-//         $file = $_FILES['file_image'];
-        
-//         // Verifica o tipo de ficheiro
-//         $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-//         if (!in_array($file['type'], $allowedTypes)) 
-//         {
-//             header('Content-Type: application/json');
-//             echo json_encode(['error' => 'Tipo de ficheiro não permitido']);
-//             exit;
-//         }
-        
-//         // Gera um nome único para o ficheiro
-//         $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-//         $filename = uniqid() . '.' . $extension;
-//         $filepath = '/public/uploads/' . $filename;
-//         $fullPath = $_SERVER['DOCUMENT_ROOT'] . $filepath;
-        
-//         // Move o ficheiro carregado
-//         move_uploaded_file($file['tmp_name'], $fullPath);
-        
-//         // Aplica a sobreposição se fornecida
-//         if (isset($_POST['overlay_id']) && !empty($_POST['overlay_id'])) 
-//         {
-//             $overlay_id = (int)$_POST['overlay_id'];
-//             if ($this->overlayModel->getOverlayById($overlay_id)) 
-//             {
-//                 $this->applyOverlay($fullPath, $_SERVER['DOCUMENT_ROOT'] . $this->overlayModel->filepath);
-//             }
-//         }
-//         if (isset($_POST['filter']) && !empty($_POST['filter'])) 
-//         {
-//             $filter = $_POST['filter'];
-//             $this->applyFilter($fullPath, $filter);
-//         }
-
-//     } 
-//     else 
-//     {
-//         header('Content-Type: application/json');
-//         echo json_encode(['error' => 'Nenhuma imagem fornecida']);
-//         exit;
-//     }
-    
-//     // Guarda a imagem na base de dados
-//     if ($this->imageModel->saveImage($_SESSION['user_id'], $filepath)) 
-//     {
-//         header('Content-Type: application/json');
-//         echo json_encode([
-//             'success' => true,
-//             'image_id' => $this->imageModel->id,
-//             'filepath' => $filepath
-//         ]);
-//     } 
-//     else 
-//     {
-//         header('Content-Type: application/json');
-//         echo json_encode(['error' => 'Erro ao guardar a imagem']);
-//     }
-    
-//     exit;
-// }
-    
-public function upload() 
-{
-
-    error_reporting(E_ERROR); // Reportar apenas erros fatais
-    ini_set('display_errors', 0); // Não exibir erros
-    ob_clean(); // Limpar buffer de saída
-
-     if (!isset($_SESSION['user_id'])) 
-    {
-        header('Content-Type: application/json');
-        echo json_encode(['error' => 'Não autorizado']);
+        //header("Location: ?page=gallery"); // Redirecionar para galeria
+        header("Location: ?page=editor"); // ficmaos no editor ??? fica assim
         exit;
     }
-    
-    $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/public/uploads/';
-    
-    if (!file_exists($uploadDir)) 
-    {
-        mkdir($uploadDir, 0777, true);
+
+    public function upload() {
+        global $pdo;
+
+        if (!isset($_SESSION['user_id'])) {
+            header("Location: ?page=login");
+            exit;
+        }
+
+        if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+            die("Erro no upload da imagem.");
+        }
+
+        $tmpPath = $_FILES['image']['tmp_name'];
+        $ext = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, ['jpg', 'jpeg', 'png'])) {
+            die("Formato inválido. Usa JPG ou PNG.");
+        }
+
+        if (!is_dir('uploads')) {
+            mkdir('uploads');
+        }
+
+        $newFilename = 'uploads/' . uniqid() . '.png';
+
+        list($width, $height) = getimagesize($tmpPath);
+
+        // Carregar imagem original sem resize
+        if (in_array($ext, ['jpg', 'jpeg'])) {
+            $srcImage = imagecreatefromjpeg($tmpPath);
+        } else {
+            $srcImage = imagecreatefrompng($tmpPath);
+        }
+
+        // Overlay
+        $overlayPath = $_POST['overlay'] ?? '';
+        if ($overlayPath && file_exists(ltrim($overlayPath, '/'))) {
+            $overlayFullPath = ltrim($overlayPath, '/');
+            $overlayImage = imagecreatefrompng($overlayFullPath);
+
+            $overlayWidth = imagesx($overlayImage);
+            $overlayHeight = imagesy($overlayImage);
+            $newOverlayWidth = intval($_POST['overlay_scale'] ?? 100);
+            $scaleFactor = $newOverlayWidth / $overlayWidth;
+            $newOverlayHeight = intval($overlayHeight * $scaleFactor);
+
+            $resizedOverlay = imagecreatetruecolor($newOverlayWidth, $newOverlayHeight);
+            imagealphablending($resizedOverlay, false);
+            imagesavealpha($resizedOverlay, true);
+            $transparent = imagecolorallocatealpha($resizedOverlay, 0, 0, 0, 127);
+            imagefill($resizedOverlay, 0, 0, $transparent);
+
+            imagecopyresampled($resizedOverlay, $overlayImage, 0, 0, 0, 0,
+                $newOverlayWidth, $newOverlayHeight,
+                $overlayWidth, $overlayHeight);
+
+            imagedestroy($overlayImage);
+
+            $posX = intval($_POST['overlay_x'] ?? 0);
+            $posY = intval($_POST['overlay_y'] ?? 0);
+
+            imagealphablending($srcImage, true);
+            imagesavealpha($srcImage, true);
+
+            imagecopy($srcImage, $resizedOverlay, $posX, $posY, 0, 0,
+                $newOverlayWidth, $newOverlayHeight);
+
+            imagedestroy($resizedOverlay);
+        }
+
+        // Aplicar filtro ao resultado final
+        $filter = $_POST['filter'] ?? '';
+        switch ($filter) {
+            case 'grayscale':
+                imagefilter($srcImage, IMG_FILTER_GRAYSCALE);
+                break;
+            case 'sepia':
+                imagefilter($srcImage, IMG_FILTER_GRAYSCALE);
+                imagefilter($srcImage, IMG_FILTER_COLORIZE, 90, 60, 40);
+                break;
+            case 'invert':
+                imagefilter($srcImage, IMG_FILTER_NEGATE);
+                break;
+            case 'brightness':
+                imagefilter($srcImage, IMG_FILTER_BRIGHTNESS, 50);
+                break;
+        }
+
+        imagepng($srcImage, $newFilename);
+        imagedestroy($srcImage);
+
+        $stmt = $pdo->prepare("INSERT INTO images (user_id, filename) VALUES (:user_id, :filename)");
+        $stmt->execute([
+            'user_id' => $_SESSION['user_id'],
+            'filename' => $newFilename
+        ]);
+
+        header("Location: ?page=editor");
+        exit;
     }
-    
-    if (isset($_POST['webcam_image'])) 
-    {
-        // Upload via webcam (base64)
-        $img = $_POST['webcam_image'];
-        $img = str_replace('data:image/png;base64,', '', $img);
-        $img = str_replace(' ', '+', $img);
-        $data = base64_decode($img);
-        
-        // Gera um nome único para o ficheiro
-        $filename = uniqid() . '.png';
-        $filepath = '/public/uploads/' . $filename;
-        $fullPath = $_SERVER['DOCUMENT_ROOT'] . $filepath;
-        
-        // Guarda a imagem
-        file_put_contents($fullPath, $data);
-        
-        if (isset($_POST['overlay_id']) && !empty($_POST['overlay_id'])) 
-        {
-            $overlay_id = (int)$_POST['overlay_id'];
-            if ($this->overlayModel->getOverlayById($overlay_id)) 
-            {
-                $this->applyOverlay($fullPath, $_SERVER['DOCUMENT_ROOT'] . $this->overlayModel->filepath);
+
+    public function deleteImage() {
+        global $pdo;
+
+        if (!isset($_SESSION['user_id'])) {
+            header("Location: ?page=login");
+            exit;
+        }
+
+        $image_id = $_POST['image_id'] ?? null;
+
+        if ($image_id) {
+            $stmt = $pdo->prepare("SELECT * FROM images WHERE id = :id AND user_id = :user_id");
+            $stmt->execute([
+                'id' => $image_id,
+                'user_id' => $_SESSION['user_id']
+            ]);
+            $image = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($image) {
+                if (file_exists($image['filename'])) {
+                    unlink($image['filename']);
+                }
+
+                $stmt = $pdo->prepare("DELETE FROM images WHERE id = :id");
+                $stmt->execute(['id' => $image_id]);
             }
         }
 
-        if (isset($_POST['filter']) && !empty($_POST['filter'])) 
-        {
-            $filter = $_POST['filter'];
-            $this->applyFilter($fullPath, $filter);
-        }
-    } 
-    elseif (isset($_FILES['file_image'])) 
-    {
-        $file = $_FILES['file_image'];
-        
-        // Verifica o tipo de ficheiro
-        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-        if (!in_array($file['type'], $allowedTypes)) 
-        {
-            header('Content-Type: application/json');
-            echo json_encode(['error' => 'Tipo de ficheiro não permitido']);
-            exit;
-        }
-        
-        // Gera um nome único para o ficheiro
-        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-        $filename = uniqid() . '.' . $extension;
-        $filepath = '/public/uploads/' . $filename;
-        $fullPath = $_SERVER['DOCUMENT_ROOT'] . $filepath;
-        
-        // Move o ficheiro carregado
-        move_uploaded_file($file['tmp_name'], $fullPath);
-        
-        // Aplica a sobreposição se fornecida
-        if (isset($_POST['overlay_id']) && !empty($_POST['overlay_id'])) 
-        {
-            $overlay_id = (int)$_POST['overlay_id'];
-            if ($this->overlayModel->getOverlayById($overlay_id)) 
-            {
-                $this->applyOverlay($fullPath, $_SERVER['DOCUMENT_ROOT'] . $this->overlayModel->filepath);
-            }
-        }
-        
-        if (isset($_POST['filter']) && !empty($_POST['filter'])) 
-        {
-            $filter = $_POST['filter'];
-            $this->applyFilter($fullPath, $filter);
-        }
-    } 
-    else 
-    {
-        header('Content-Type: application/json');
-        echo json_encode(['error' => 'Nenhuma imagem fornecida']);
+        header("Location: ?page=editor");
         exit;
     }
-    
-        // Guarda a imagem na base de dados
-        if ($this->imageModel->saveImage($_SESSION['user_id'], $filepath)) 
-        {
-
-            header('Content-Type: text/plain');
-            echo "success";
-            exit;
-        } 
-        else 
-        {
-            header('Content-Type: text/plain');
-            echo "error";
-            exit;
-        }
-    
-    exit;
 }
-
-
-
-    private function applyOverlay($baseImagePath, $overlayPath) 
-    {
-        // Carrega as imagens
-        $extension = pathinfo($baseImagePath, PATHINFO_EXTENSION);
-        if ($extension === 'png') 
-        {
-            $baseImage = imagecreatefrompng($baseImagePath);
-        } 
-        elseif ($extension === 'jpg' || $extension === 'jpeg') 
-        {
-            $baseImage = imagecreatefromjpeg($baseImagePath);
-        } 
-        elseif ($extension === 'gif') 
-        {
-            $baseImage = imagecreatefromgif($baseImagePath);
-        } 
-        else 
-        {
-            return false;
-        }
-        
-        $overlay = imagecreatefrompng($overlayPath); 
-        
-        
-     
-        
-        $baseWidth = imagesx($baseImage);
-        $baseHeight = imagesy($baseImage);
-        $overlayWidth = imagesx($overlay);
-        $overlayHeight = imagesy($overlay);
-
-        
-        $newWidth = $baseWidth / 2; 
-        
-        $newHeight = $overlayHeight * ($newWidth / $overlayWidth);
-        
-     
-        
-        $posX = ($baseWidth - $newWidth) / 2;
-        $posY = ($baseHeight - $newHeight) / 2;
-        
-
-        
-        imagecopyresampled(
-            $baseImage, $overlay,
-            (int)$posX, (int)$posY, 0, 0,
-            (int)$newWidth, (int)$newHeight, $overlayWidth, $overlayHeight
-        );
-    
-        
-        if ($extension === 'png') 
-        {
-            imagepng($baseImage, $baseImagePath);
-        } 
-        elseif ($extension === 'jpg' || $extension === 'jpeg') 
-        {
-            imagejpeg($baseImage, $baseImagePath);
-        } 
-        elseif ($extension === 'gif') 
-        {
-            imagegif($baseImage, $baseImagePath);
-        }
-        
-     
-        
-        imagedestroy($baseImage);
-        imagedestroy($overlay);
-        
-        return true;
-    }
-    
-   
-    
-    public function delete() 
-    {
- 
-        
-        if (!isset($_SESSION['user_id'])) 
-        {
-            $this->redirect('/?controller=user&action=login');
-            return;
-        }
-        
-       
-        
-        if (!isset($_GET['id'])) 
-        {
-            $this->redirect('/?controller=editor');
-            return;
-        }
-        
-        $image_id = (int)$_GET['id'];
-        
-
-        
-        if ($this->imageModel->deleteImage($image_id, $_SESSION['user_id'])) 
-        {
-
-            
-            $this->redirect('/?controller=editor&success=deleted');
-        } 
-        else 
-        {
- 
-            
-            $this->redirect('/?controller=editor&error=delete_failed');
-        }
-    }
-}
+?>

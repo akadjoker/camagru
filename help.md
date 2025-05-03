@@ -2,9 +2,10 @@ docker-compose up -d
 
 docker-compose ps
 
-docker-compose logs web
+docker-compose logs camagru_web
 
-docker-compose exec web bash
+docker-compose exec camagru_web bash
+php config/setup.php
 
 docker-compose down
 

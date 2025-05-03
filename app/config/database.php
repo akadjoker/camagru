@@ -1,38 +1,18 @@
 <?php
+define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+define('DB_PORT', getenv('DB_PORT') ?: '5432');
+define('DB_NAME', getenv('DB_NAME') ?: 'camagru');
+define('DB_USER', getenv('DB_USER') ?: 'sqluser');
+define('DB_PASSWORD', getenv('DB_PASSWORD') ?: 'sqlpass');
 
-
-class Database 
-{
-    private $host;
-    private $port;
-    private $db_name;
-    private $username;
-    private $password;
-    private $conn;
-
-    public function __construct() 
-    {
-        $this->host = getenv('DB_HOST');
-        $this->port = getenv('DB_PORT');
-        $this->db_name = getenv('DB_NAME');
-        $this->username = getenv('DB_USER');
-        $this->password = getenv('DB_PASSWORD');
-    }
-
-    public function getConnection() 
-    {
-        $this->conn = null;
-
-        try
-         {
-            $dsn = "pgsql:host={$this->host};port={$this->port};dbname={$this->db_name}";
-            $this->conn = new PDO($dsn, $this->username, $this->password);
-            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        } catch(PDOException $e)
-         {
-            echo "Erro de conexão: " . $e->getMessage();
-        }
-
-        return $this->conn;
-    }
+try {
+    $pdo = new PDO(
+        "pgsql:host=".DB_HOST.";port=".DB_PORT.";dbname=".DB_NAME,
+        DB_USER,
+        DB_PASSWORD
+    );
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("Database connection failed: " . $e->getMessage());
 }
+?>

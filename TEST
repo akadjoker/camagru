@@ -1,0 +1,28 @@
+1. Testes de Autenticação
+Recuperação de password: Testa o fluxo de "Esqueci a password" e verifica se consegues redefinir a password
+Perfil: Verifica se consegues editar os dados do perfil
+
+
+Notificações: Verifica se os donos das imagens recebem notificações por email quando alguém comenta
+
+
+
+XSS:  inserir código HTML/JavaScript em comentários e verifica se é escapado corretamente
+Acesso não autorizado: Tenta aceder a páginas restritas sem estar autenticado
+Eliminação de conteúdo: Verifica se apenas o dono pode apagar suas próprias imagens
+
+
+
+Layout móvel: Testa a aplicação em diferentes tamanhos de ecrã
+Compatibilidade: Verifica se funciona nos navegadores requeridos (Firefox >= 41 e Chrome >= 46)
+
+
+
+DO $$
+BEGIN
+    FOR i IN 1..200 LOOP
+        INSERT INTO images (user_id, filename, created_at)
+        VALUES (3, 'uploads/sample3.png', NOW());
+    END LOOP;
+END $$;
+

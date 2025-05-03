@@ -1,0 +1,1 @@
+// Código JS para editor (webcam, overlays, filtros)
