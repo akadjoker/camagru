@@ -189,6 +189,20 @@ class EditorController {
 
         $newFilename = 'uploads/' . uniqid() . '.png';
 
+
+        if (!is_uploaded_file($_FILES['image']['tmp_name'])) {
+            $errors[] = "Erro no upload da imagem. Tenta novamente.";
+            include 'views/editor.php';
+            return;
+        }
+        
+        if (!getimagesize($_FILES['image']['tmp_name'])) {
+            $errors[] = "Ficheiro inválido ou corrompido.";
+            include 'views/editor.php';
+            return;
+        }
+        
+
         list($width, $height) = getimagesize($tmpPath);
 
         // Carregar imagem original sem resize
